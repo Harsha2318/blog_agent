@@ -1,5 +1,7 @@
 # Blog Agent
 
+https://drive.google.com/file/d/1SXeArFPHFucGPbfgErjbFoPY0Nh-e2qw/view?usp=sharing
+
 ## Description
 Blog Agent is a Node.js application that leverages AI and various APIs to generate and manage blog content. It includes a backend server using Express and integrates with Google Generative AI, among other tools.
 
