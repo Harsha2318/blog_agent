@@ -1,18 +1,27 @@
 import 'dotenv/config';
+import cors from 'cors';
 import express from 'express';
 import bodyParser from 'body-parser';
 import { generateBlog } from './index.js';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { BlogPost } from './db.js';
+import MarkdownIt from 'markdown-it';
 
 const app = express();
 const port = process.env.PORT || 4000;
 
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+}));
+
 app.use(bodyParser.json());
+
+app.options('*', cors());
+
+const md = new MarkdownIt();
 
 app.post('/generate-blog', async (req, res) => {
   const { topic, exportFormat } = req.body;
@@ -24,41 +33,19 @@ app.post('/generate-blog', async (req, res) => {
   try {
     const blogContent = await generateBlog(topic);
 
-    // Export blog if requested
-    let exportPath = null;
-    if (exportFormat === 'md' || exportFormat === 'html') {
-      const fileName = topic.toLowerCase().replace(/\s+/g, '_') + (exportFormat === 'md' ? '.md' : '.html');
-      exportPath = path.join(__dirname, 'exports');
-      if (!fs.existsSync(exportPath)) {
-        fs.mkdirSync(exportPath);
-      }
-      const fullPath = path.join(exportPath, fileName);
+    // Save blog content to MongoDB
+    const blogPost = new BlogPost({
+      topic,
+      content: blogContent,
+    });
 
-      let contentToWrite = blogContent;
-      if (exportFormat === 'html') {
-        // Simple conversion from markdown to HTML (basic)
-        contentToWrite = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>${topic}</title>
-</head>
-<body>
-<pre>${blogContent.replace(/</g, '<').replace(/>/g, '>')}</pre>
-</body>
-</html>`;
-      }
-
-      fs.writeFileSync(fullPath, contentToWrite, 'utf-8');
-      exportPath = fullPath;
-    }
+    const savedPost = await blogPost.save();
 
     res.json({
-      topic,
-      blogContent,
-      exportPath,
+      id: savedPost._id,
+      topic: savedPost.topic,
+      blogContent: savedPost.content,
+      createdAt: savedPost.createdAt,
     });
   } catch (error) {
     console.error('Error generating blog:', error);
