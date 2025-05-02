@@ -22,3 +22,6 @@ build/
 # IDE files
 .vscode/
 .idea/
+
+# Frontend folder
+frontend/
